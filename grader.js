@@ -47,6 +47,7 @@ var loadChecks = function(checksfile) {
 
 var checkHtmlFile = function(htmlfile, checksfile) {
     $ = cheerioHtmlFile(htmlfile);
+    
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -55,6 +56,23 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     }
     return out;
 };
+
+var cheerioHtmlURL = function(htmlurl) {
+    return cheerio.load(htmlurl);
+};
+
+var checkHtmlURL = function(htmlurl, checksfile) {
+    $ = cheerioHtmlURL(htmlurl);
+    
+    var checks = loadChecks(checksfile).sort();
+    var out = {};
+    for(var ii in checks) {
+        var present = $(checks[ii]).length > 0;
+        out[checks[ii]] = present;
+    }
+    return out;
+};
+
 
 var clone = function(fn) {
     // Workaround for commander.js issue.
@@ -68,9 +86,26 @@ if(require.main == module) {
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
 	.option('-u, --url <url>', 'Url to index.html')
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    
+    var checkJson;
+    
+    if (undefined != program.url) {
+      rest.get(program.url).on('complete',function(result) {
+         if (result instanceof Error)
+	   console.error(result);
+         else {
+	   checkJson = checkHtmlURL(result, program.checks);
+	   var outJson = JSON.stringify(checkJson, null, 4);
+	   console.log(outJson);
+         }
+      });
+      
+    } else {
+      checkJson = checkHtmlFile(program.file, program.checks);
+      var outJson = JSON.stringify(checkJson, null, 4);
+      console.log(outJson);
+    } 
+    
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
